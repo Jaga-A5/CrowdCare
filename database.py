@@ -118,6 +118,12 @@ def init_db():
             ('Jane Smith', '0987654321', 13.0830, 80.2710)
         ])
         
+    # Ensure at least one zone exists for camera uploads to work
+    c.execute('SELECT COUNT(*) FROM zones')
+    if c.fetchone()[0] == 0:
+        c.execute('INSERT INTO zones (id, name, latitude, longitude) VALUES (?, ?, ?, ?)',
+                  (1, 'Main Camera Zone', 13.0827, 80.2707))
+        
     conn.commit()
     conn.close()
 
