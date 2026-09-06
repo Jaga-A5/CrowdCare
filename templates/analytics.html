@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Big Data Analytics Dashboard</h2>
+</div>
+
+<div class="row mb-4 text-center">
+    <div class="col-md-2">
+        <div class="card p-2 bg-light"><h6>Avg Crowd</h6><h4>{{ analytics.avg_crowd }}</h4></div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-2 bg-light"><h6>Max Crowd</h6><h4>{{ analytics.max_crowd }}</h4></div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-2 bg-light"><h6>Peak Hour</h6><h4>{{ analytics.peak_hour }}</h4></div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-2 bg-light"><h6>Avg Resp Time</h6><h4>{{ analytics.avg_response_time }}s</h4></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-2 bg-warning text-dark">
+            <h6>Simple Crowd Prediction</h6>
+            <span>Current: <b>{{ current_crowd }}</b> &rarr; Predicted: <b>{{ pred_val }} ({{ pred_cat }})</b></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">Top 10 Crowded Zones</div>
+            <div class="card-body"><canvas id="zoneChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">Density Distribution</div>
+            <div class="card-body"><canvas id="densityChart"></canvas></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const analytics = {{ analytics|tojson }};
+    
+    // Zone Chart
+    new Chart(document.getElementById('zoneChart'), {
+        type: 'bar',
+        data: {
+            labels: analytics.zone_comparison.labels,
+            datasets: [{
+                label: 'Average Crowd Count',
+                data: analytics.zone_comparison.data,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        }
+    });
+
+    // Density Chart
+    new Chart(document.getElementById('densityChart'), {
+        type: 'pie',
+        data: {
+            labels: analytics.density_distribution.labels,
+            datasets: [{
+                data: analytics.density_distribution.data,
+                backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545']
+            }]
+        }
+    });
+</script>
+{% endblock %}

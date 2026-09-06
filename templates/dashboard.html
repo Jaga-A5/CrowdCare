@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-info text-white text-center p-3 shadow-sm">
+            <h5>Total Zones</h5>
+            <h2 id="dash-zones">{{ zones }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white text-center p-3 shadow-sm">
+            <h5>Current Crowd</h5>
+            <h2 id="dash-crowd">0</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white text-center p-3 shadow-sm">
+            <h5>Active Incidents</h5>
+            <h2 id="dash-incidents">{{ incidents }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white text-center p-3 shadow-sm">
+            <h5>Responders Available</h5>
+            <h2 id="dash-responders">{{ responders }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">Live Crowd Map</div>
+            <div class="card-body p-0">
+                <div id="map" style="height: 400px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        initMap();
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000);
+    });
+</script>
+{% endblock %}

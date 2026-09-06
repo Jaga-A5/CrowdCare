@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card shadow mt-4">
+    <div class="card-header bg-dark text-white">
+        <h2><i class="bi bi-gear"></i> System Simulation Panel</h2>
+    </div>
+    <div class="card-body">
+        <p class="lead">Use this panel to simulate different states of the CrowdCare system.</p>
+        <hr>
+        
+        <div class="row text-center mt-4">
+            <div class="col-md-4 mb-3">
+                <div class="card border-primary h-100">
+                    <div class="card-body">
+                        <h5>Initialize Map Zones</h5>
+                        <p class="text-muted small">Generates 40 coordinate points to populate the map in the Dashboard.</p>
+                        <button class="btn btn-outline-primary" id="genZonesBtn">Generate 40 Zones</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card border-danger h-100">
+                    <div class="card-body">
+                        <h5>Simulate Disaster</h5>
+                        <p class="text-muted small">Manually inject a "CRITICAL" incident to instantly test the routing system without using the camera.</p>
+                        <button class="btn btn-outline-danger" id="simIncidentBtn">Trigger Alert</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card border-info h-100">
+                    <div class="card-body">
+                        <h5>Analytics Demo</h5>
+                        <p class="text-muted small">Go to the Big Data generator to instantly create 100k records for the dashboard.</p>
+                        <a href="/bigdata" class="btn btn-outline-info">Go to Big Data Gen</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="simResult" class="mt-4 font-weight-bold text-center"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('genZonesBtn').addEventListener('click', () => {
+        document.getElementById('simResult').innerHTML = "Generating 40 software zones...";
+        fetch('/api/generate_zones', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('simResult').innerHTML = `<span class="text-success">${data.message}</span>`;
+        });
+    });
+    
+    document.getElementById('simIncidentBtn').addEventListener('click', () => {
+        const data = {
+            type: "Simulated Overcrowding Alert",
+            severity: "CRITICAL",
+            description: "System admin manually triggered a disaster simulation.",
+            latitude: 13.0827 + (Math.random() * 0.01),
+            longitude: 80.2707 + (Math.random() * 0.01)
+        };
+        fetch('/api/report_incident', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            document.getElementById('simResult').innerHTML = `<span class="text-danger">${res.message}. Responder assigned: ${res.assigned_responder}</span>`;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card shadow mt-4">
+    <div class="card-header bg-primary text-white">
+        <h2><i class="bi bi-cloud"></i> Cloud Computing Concepts in CrowdCare</h2>
+    </div>
+    <div class="card-body">
+        <p class="lead">This prototype demonstrates core cloud computing principles using a localized Client-Server model.</p>
+        <hr>
+        
+        <h4>1. Client-Server Architecture</h4>
+        <p>The Android phones act as <strong>Mobile Edge Clients</strong>. They capture raw images and stream them over the network to a central processing unit. The Laptop running the Flask API acts as the <strong>Cloud Server</strong>, handling requests, running heavy AI logic, and serving responses.</p>
+        
+        <h4>2. Cloud Object Storage Simulation</h4>
+        <p>In a real production environment, images and incident logs are stored in scalable services like <strong>AWS S3</strong> or <strong>Google Cloud Storage</strong>. In this project, the <code>cloud_storage/</code> directory simulates this by isolating raw data storage from the relational database.</p>
+        
+        <h4>3. Resource Pooling & Scalability</h4>
+        <p>The server can theoretically process images from dozens of cameras (Camera 1, 2, 3...) simultaneously, showcasing how cloud resources are pooled to serve multiple clients on demand.</p>
+        
+        <h4>4. Network Data Accessibility</h4>
+        <p>All data is centralized in the cloud database (SQLite) and made accessible universally through this web dashboard, ensuring that officers and marshals have real-time synchronization regardless of their physical location.</p>
+    </div>
+</div>
+{% endblock %}

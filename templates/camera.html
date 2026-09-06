@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row" id="cameraGrid">
+    <!-- Camera panels will be injected here by Javascript -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const cameraGrid = document.getElementById('cameraGrid');
+    
+    // Fetch available video devices
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        // Create 3 camera panels
+        for (let i = 1; i <= 3; i++) {
+            createCameraPanel(i, videoDevices);
+        }
+    });
+
+    function createCameraPanel(panelId, videoDevices) {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-4';
+        
+        let deviceOptions = videoDevices.map((d, idx) => 
+            `<option value="${d.deviceId}">${d.label || 'Camera ' + (idx + 1)}</option>`
+        ).join('');
+
+        col.innerHTML = `
+            <div class="card shadow h-100">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Stream ${panelId}</h5>
+                    <span id="statusIndicator_${panelId}" class="badge bg-secondary">OFFLINE</span>
+                </div>
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-2 text-start">
+                        <label class="form-label font-weight-bold" style="font-size: 0.9em;">Monitoring Zone</label>
+                        <select id="cameraSelect_${panelId}" class="form-select form-select-sm">
+                            <option value="1" ${panelId===1?'selected':''}>Zone 1 (Main Entrance)</option>
+                            <option value="2" ${panelId===2?'selected':''}>Zone 2 (Stage Area)</option>
+                            <option value="3" ${panelId===3?'selected':''}>Zone 3 (Food Court)</option>
+                        </select>
+                    </div>
+                    <div class="mb-2 text-start">
+                        <label class="form-label font-weight-bold" style="font-size: 0.9em;">Hardware Source</label>
+                        <select id="videoSource_${panelId}" class="form-select form-select-sm">
+                            ${deviceOptions}
+                        </select>
+                    </div>
+                    <div class="mb-2 text-start">
+                        <label class="form-label font-weight-bold" style="font-size: 0.9em;">Crowd Threshold</label>
+                        <input type="number" id="thresholdInput_${panelId}" class="form-control form-control-sm" value="5" min="1" max="100">
+                    </div>
+                    
+                    <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 5px; overflow: hidden; min-height: 200px;" class="mb-3">
+                        <video id="video_${panelId}" width="100%" autoplay playsinline></video>
+                        <img id="aiOutput_${panelId}" width="100%" style="display:none;" />
+                    </div>
+                    <canvas id="canvas_${panelId}" style="display:none;"></canvas>
+                    
+                    <div class="mt-auto">
+                        <button id="startBtn_${panelId}" class="btn btn-success btn-sm w-100 mb-2">Start Live AI</button>
+                        <button id="stopBtn_${panelId}" class="btn btn-danger btn-sm w-100 mb-2" style="display: none;">Stop</button>
+                        <div id="result_${panelId}" class="font-weight-bold" style="font-size: 1.1em; min-height: 24px;"></div>
+                        <div id="alertBox_${panelId}" class="text-danger font-weight-bold mt-1" style="font-size: 0.9em; min-height: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        cameraGrid.appendChild(col);
+        
+        // Initialize Panel Logic
+        const video = document.getElementById(`video_${panelId}`);
+        const aiOutput = document.getElementById(`aiOutput_${panelId}`);
+        const canvas = document.getElementById(`canvas_${panelId}`);
+        const startBtn = document.getElementById(`startBtn_${panelId}`);
+        const stopBtn = document.getElementById(`stopBtn_${panelId}`);
+        const resultDiv = document.getElementById(`result_${panelId}`);
+        const alertBox = document.getElementById(`alertBox_${panelId}`);
+        const statusIndicator = document.getElementById(`statusIndicator_${panelId}`);
+        const videoSource = document.getElementById(`videoSource_${panelId}`);
+        const cameraSelect = document.getElementById(`cameraSelect_${panelId}`);
+        const thresholdInput = document.getElementById(`thresholdInput_${panelId}`);
+        
+        let isMonitoring = false;
+        let monitorTimeout;
+
+        function startCamera() {
+            const deviceId = videoSource.value;
+            const constraints = { video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' } };
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => { video.srcObject = stream; })
+                .catch(err => { console.error("Error accessing camera: ", err); });
+        }
+        
+        videoSource.addEventListener('change', startCamera);
+        
+        // Auto-select a different camera for each panel if possible
+        if (videoDevices.length >= panelId) {
+            videoSource.selectedIndex = panelId - 1;
+        }
+        startCamera();
+        
+        function captureAndUpload() {
+            if (!isMonitoring) return;
+            
+            resultDiv.innerHTML = "AI Analyzing frame...";
+            alertBox.innerHTML = "";
+            
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'capture.jpg');
+                formData.append('zone_id', cameraSelect.value); 
+                formData.append('threshold', thresholdInput.value);
+                
+                fetch('/api/upload_image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!isMonitoring) return;
+                    let color = "green";
+                    if(data.density === "HIGH") color = "orange";
+                    if(data.density === "CRITICAL") color = "red";
+                    
+                    resultDiv.innerHTML = `<span style="color:${color}">Count: ${data.crowd_count} | ${data.density}</span>`;
+                    
+                    if (data.alert_message) {
+                        alertBox.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${data.alert_message}`;
+                    }
+                    
+                    if (data.image) {
+                        video.style.display = 'none';
+                        aiOutput.style.display = 'block';
+                        aiOutput.src = "data:image/jpeg;base64," + data.image;
+                    }
+                    
+                    monitorTimeout = setTimeout(captureAndUpload, 5000);
+                })
+                .catch(err => {
+                    if (!isMonitoring) return;
+                    resultDiv.innerHTML = "Error analyzing. Retrying...";
+                    monitorTimeout = setTimeout(captureAndUpload, 5000);
+                });
+            }, 'image/jpeg');
+        }
+
+        startBtn.addEventListener('click', () => {
+            isMonitoring = true;
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            statusIndicator.className = 'badge bg-success';
+            statusIndicator.innerText = 'LIVE';
+            captureAndUpload();
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            isMonitoring = false;
+            clearTimeout(monitorTimeout);
+            stopBtn.style.display = 'none';
+            startBtn.style.display = 'inline-block';
+            statusIndicator.className = 'badge bg-secondary';
+            statusIndicator.innerText = 'OFFLINE';
+            
+            video.style.display = 'block';
+            aiOutput.style.display = 'none';
+            
+            resultDiv.innerHTML = "Monitoring stopped.";
+            alertBox.innerHTML = "";
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Marshal Interface: Report Incident</h2>
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <form id="incidentForm">
+            <div class="mb-3">
+                <label>Incident Type</label>
+                <select class="form-select" id="incType">
+                    <option>Overcrowding</option>
+                    <option>Medical Emergency</option>
+                    <option>Fire</option>
+                    <option>Security</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Severity</label>
+                <select class="form-select" id="incSev">
+                    <option>LOW</option>
+                    <option>MEDIUM</option>
+                    <option>HIGH</option>
+                    <option>CRITICAL</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Description</label>
+                <textarea class="form-control" id="incDesc" rows="3"></textarea>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="submitIncident()">Report Incident</button>
+        </form>
+        <div id="incResult" class="mt-3 font-weight-bold text-success"></div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function submitIncident() {
+        const data = {
+            type: document.getElementById('incType').value,
+            severity: document.getElementById('incSev').value,
+            description: document.getElementById('incDesc').value,
+            latitude: 13.0827 + (Math.random() * 0.01),
+            longitude: 80.2707 + (Math.random() * 0.01)
+        };
+        fetch('/api/report_incident', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            document.getElementById('incResult').innerHTML = res.message + ". Assigned to: " + res.assigned_responder;
+            document.getElementById('incidentForm').reset();
+        });
+    }
+</script>
+{% endblock %}

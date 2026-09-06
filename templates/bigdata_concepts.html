@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card shadow mt-4">
+    <div class="card-header bg-success text-white">
+        <h2><i class="bi bi-database"></i> The 5Vs of Big Data in CrowdCare</h2>
+    </div>
+    <div class="card-body">
+        <p class="lead">Crowd monitoring systems generate massive amounts of data. This project demonstrates the 5Vs of Big Data.</p>
+        <hr>
+        
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-primary">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">1. Volume</h5>
+                        <p class="card-text">Through the <strong>Big Data Gen</strong> page, we can generate up to <strong>100,000 records</strong> across 40 simulated zones to demonstrate how the system handles large-scale data storage and querying.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-success">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">2. Velocity</h5>
+                        <p class="card-text">The Live AI Camera module pushes new data frames to the server every 5 seconds, illustrating the rapid speed at which real-time streaming data must be ingested and processed.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-warning">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">3. Variety</h5>
+                        <p class="card-text">The system handles multiple data types: structured relational data (SQLite), unstructured binary data (Camera Images), and geographical data (Lat/Lon coordinates).</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-danger">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">4. Veracity</h5>
+                        <p class="card-text">AI models inherently contain noise. We clean and filter the data (e.g., using confidence thresholds > 0.4 in the MobileNet-SSD) to ensure the data is accurate before triggering alerts.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-info">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">5. Value</h5>
+                        <p class="card-text">Raw numbers are useless without context. Our <strong>Analytics Dashboard</strong> extracts value from the data by predicting peak hours, identifying dangerous zones, and automatically assigning responders to save lives.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

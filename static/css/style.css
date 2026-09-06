@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg-body: #eef2f9;
+    --card-bg: #ffffff;
+    
+    /* The Signature Vibrant Gradient */
+    --vibrant-gradient: linear-gradient(135deg, #7b2cbf, #3a0ca3);
+    --vibrant-gradient-hover: linear-gradient(135deg, #9d4edd, #4361ee);
+    
+    /* Text Colors */
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --text-light: #f8fafc;
+    
+    /* Accent Colors */
+    --accent-red: #ff4757;
+    --accent-green: #2ed573;
+    --accent-blue: #1e90ff;
+    --accent-orange: #ffa502;
+    
+    /* Styling */
+    --radius-lg: 30px;
+    --radius-md: 20px;
+    --radius-sm: 12px;
+    --shadow-soft: 0 20px 40px rgba(0, 0, 0, 0.06);
+}
+
+body { 
+    background-color: var(--bg-body);
+    color: var(--text-dark);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-dark);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+/* -------------------------
+   Cards & Panels
+   ------------------------- */
+.card { 
+    background-color: var(--card-bg);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+}
+
+.card-header {
+    background-color: transparent !important;
+    border-bottom: none;
+    padding: 1.5rem 1.75rem 0.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.card-body {
+    padding: 1.5rem 1.75rem;
+}
+
+/* Vibrant Header Class */
+.card-header.bg-primary {
+    background: var(--vibrant-gradient) !important;
+    color: var(--text-light) !important;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: 1.5rem;
+}
+
+.card-header.bg-primary h1,
+.card-header.bg-primary h2,
+.card-header.bg-primary h3,
+.card-header.bg-primary h4,
+.card-header.bg-primary h5 {
+    color: var(--text-light);
+}
+
+/* -------------------------
+   Navigation
+   ------------------------- */
+.navbar {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-soft);
+    padding: 1rem 1.5rem;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    margin-bottom: 2rem;
+}
+
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: var(--vibrant-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nav-link {
+    font-weight: 600;
+    color: var(--text-muted) !important;
+    transition: all 0.2s ease;
+    margin: 0 0.5rem;
+    border-radius: 20px;
+    padding: 0.5rem 1rem !important;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: var(--text-dark) !important;
+    background-color: rgba(0,0,0,0.03);
+}
+
+.nav-link.bg-primary {
+    background: var(--vibrant-gradient) !important;
+    color: var(--text-light) !important;
+    box-shadow: 0 10px 20px rgba(123, 44, 191, 0.3);
+}
+
+.nav-link.bg-primary:hover {
+    background: var(--vibrant-gradient-hover) !important;
+    transform: translateY(-2px);
+}
+
+/* -------------------------
+   Buttons
+   ------------------------- */
+.btn {
+    border-radius: 30px;
+    font-weight: 600;
+    padding: 0.75rem 1.75rem;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--vibrant-gradient);
+    color: var(--text-light);
+    box-shadow: 0 10px 20px rgba(123, 44, 191, 0.3);
+}
+
+.btn-primary:hover, .btn-primary:active {
+    background: var(--vibrant-gradient-hover) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 25px rgba(123, 44, 191, 0.4) !important;
+    color: var(--text-light) !important;
+}
+
+.btn-outline-primary {
+    background: rgba(123, 44, 191, 0.1);
+    color: #7b2cbf;
+    border: 2px solid transparent;
+}
+.btn-outline-primary:hover {
+    background: rgba(123, 44, 191, 0.2);
+    color: #7b2cbf;
+}
+
+.btn-danger {
+    background: var(--accent-red);
+    color: white;
+    box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
+}
+
+/* -------------------------
+   Tables (Clean & Modern)
+   ------------------------- */
+.table-responsive {
+    border-radius: var(--radius-md);
+}
+
+.table {
+    background: transparent;
+    color: var(--text-dark);
+    margin-bottom: 0;
+}
+
+.table thead th {
+    border-bottom: 2px solid #f1f5f9;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 1.2rem 1rem;
+    border-top: none;
+}
+
+.table tbody td {
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    padding: 1.2rem 1rem;
+    vertical-align: middle;
+    font-weight: 500;
+}
+
+.table-striped>tbody>tr:nth-of-type(odd)>* {
+    background-color: rgba(0, 0, 0, 0.01) !important;
+    color: var(--text-dark) !important;
+}
+
+.table-striped>tbody>tr:nth-of-type(even)>* {
+    background-color: transparent !important;
+    color: var(--text-dark) !important;
+}
+
+.table-hover>tbody>tr:hover>* {
+    background-color: rgba(123, 44, 191, 0.04) !important;
+}
+
+/* -------------------------
+   Badges (Pills)
+   ------------------------- */
+.badge {
+    padding: 0.5em 1em;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.bg-danger { background-color: rgba(255, 71, 87, 0.15) !important; color: var(--accent-red) !important; }
+.bg-warning { background-color: rgba(255, 165, 2, 0.15) !important; color: #d35400 !important; }
+.bg-success { background-color: rgba(46, 213, 115, 0.15) !important; color: #27ae60 !important; }
+.bg-info { background-color: rgba(123, 44, 191, 0.1) !important; color: #7b2cbf !important; }
+
+/* -------------------------
+   Inputs
+   ------------------------- */
+.form-control, .form-select {
+    background-color: #f8fafc;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    color: var(--text-dark);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #ffffff;
+    border-color: #7b2cbf;
+    box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.1);
+    outline: none;
+}
+
+/* -------------------------
+   Map
+   ------------------------- */
+#map {
+    border-radius: var(--radius-md);
+    border: none;
+    box-shadow: var(--shadow-soft);
+}
+
