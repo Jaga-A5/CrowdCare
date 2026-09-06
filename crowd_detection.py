@@ -52,13 +52,24 @@ def estimate_crowd(image_path, threshold=5):
                     if idx == 15:
                         crowd_count += 1
                         
-                        # Draw bounding box
+                        # Calculate bounding box
                         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
                         (startX, startY, endX, endY) = box.astype("int")
                         
-                        cv2.rectangle(annotated_img, (startX, startY), (endX, endY), (0, 255, 0), 2)
-                        cv2.putText(annotated_img, f"Person {crowd_count}", (startX, startY-10), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        # Calculate center and radius for a circular "field" visualization
+                        centerX = int((startX + endX) / 2)
+                        centerY = int((startY + endY) / 2)
+                        radius = int(max((endX - startX), (endY - startY)) / 1.5)
+                        
+                        # Draw advanced circular visualization
+                        cv2.circle(annotated_img, (centerX, centerY), radius, (0, 255, 255), 2) # Outer circle
+                        cv2.circle(annotated_img, (centerX, centerY), int(radius/2), (0, 200, 255), 1) # Inner ring
+                        cv2.circle(annotated_img, (centerX, centerY), 4, (0, 0, 255), -1) # Center dot
+                        
+                        # Draw a sleek label
+                        label = f"Person {crowd_count} [{int(confidence * 100)}%]"
+                        cv2.putText(annotated_img, label, (startX, startY - 15), 
+                                   cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
         else:
             # Fallback to basic Haar Cascade if DNN fails
             cascade_path = os.path.join(BASE_DIR, "haarcascade_fullbody.xml")
