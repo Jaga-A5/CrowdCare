@@ -23,6 +23,7 @@ def simulate_cloud_upload(data, category):
     import json
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     filepath = os.path.join(os.path.dirname(__file__), 'cloud_storage', category, f'data_{timestamp}.json')
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, 'w') as f:
         json.dump(data, f)
 
@@ -240,7 +241,8 @@ def upload_image():
         'crowd_count': crowd_count,
         'density': density,
         'message': 'Image processed successfully',
-        'alert_message': alert_message
+        'alert_message': alert_message,
+        'image': annotated_img_base64
     })
 
 @app.route('/marshal')
