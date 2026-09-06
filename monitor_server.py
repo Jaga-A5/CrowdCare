@@ -56,6 +56,21 @@ def video_worker():
         now = time.time()
         if count >= ALERT_THRESHOLD and (now - _last_alert_time) > ALERT_COOLDOWN:
             socketio.emit('alert', {'message': f'⚠️ ALERT: Crowd count reached {count}!'})
+            
+            # Send to main cloud server (Render)
+            try:
+                import requests
+                payload = {
+                    'type': 'Overcrowding',
+                    'description': f"Automated Alert from Local Monitor: CRITICAL crowd density detected ({count} people).",
+                    'severity': 'CRITICAL',
+                    'latitude': 13.0827,
+                    'longitude': 80.2707
+                }
+                requests.post('https://crowdcare-2wzg.onrender.com/api/report_incident', json=payload, timeout=5)
+            except Exception as e:
+                print(f"Failed to sync with Render server: {e}")
+                
             _last_alert_time = now
 
         # Small sleep to limit CPU usage

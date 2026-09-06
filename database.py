@@ -130,9 +130,16 @@ def init_db():
     # Insert sample responders
     c.execute('SELECT COUNT(*) FROM responders')
     if c.fetchone()[0] == 0:
-        c.executemany('INSERT INTO responders (name, phone, latitude, longitude) VALUES (?, ?, ?, ?)', [
-            ('John Doe', '1234567890', 13.0827, 80.2707),
-            ('Jane Smith', '0987654321', 13.0830, 80.2710)
+        # Create users first
+        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('johndoe', 'password123', 'RESPONDER'))
+        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('janesmith', 'password123', 'RESPONDER'))
+        
+        user1 = c.execute("SELECT id FROM users WHERE username='johndoe'").fetchone()
+        user2 = c.execute("SELECT id FROM users WHERE username='janesmith'").fetchone()
+        
+        c.executemany('INSERT INTO responders (name, phone, latitude, longitude, user_id) VALUES (?, ?, ?, ?, ?)', [
+            ('John Doe', '1234567890', 13.0827, 80.2707, user1[0] if user1 else None),
+            ('Jane Smith', '0987654321', 13.0830, 80.2710, user2[0] if user2 else None)
         ])
         
     # Ensure at least one zone exists for camera uploads to work
