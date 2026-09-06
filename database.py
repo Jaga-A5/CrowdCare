@@ -105,6 +105,13 @@ def init_db():
         );
     ''')
     
+    # Safely migrate existing databases to add user_id column if it doesn't exist
+    try:
+        c.execute('ALTER TABLE responders ADD COLUMN user_id INTEGER REFERENCES users(id)')
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
+        
     # Insert sample users
     c.execute('SELECT COUNT(*) FROM users')
     if c.fetchone()[0] == 0:

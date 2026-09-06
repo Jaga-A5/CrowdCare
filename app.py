@@ -10,6 +10,9 @@ import datetime
 app = Flask(__name__)
 app.secret_key = 'crowdcare_secret_key'
 
+# Ensure database is initialized even when running via Gunicorn
+init_db()
+
 # Ensure upload directory exists
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
