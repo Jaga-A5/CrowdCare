@@ -5,7 +5,10 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="bi bi-activity text-danger"></i> Live Incident Monitoring</h2>
-    <span class="badge bg-danger">Total: {{ incidents|length }}</span>
+    <div>
+        <span class="badge bg-danger me-2">Total: {{ incidents|length }}</span>
+        <span class="badge bg-warning">Auto-refreshing every 5 seconds</span>
+    </div>
 </div>
 <div class="card shadow-sm">
     <div class="card-body p-0">
@@ -17,6 +20,7 @@
                     <th>Severity</th>
                     <th>Description</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,10 +45,17 @@
                             <span class="badge bg-success">RESOLVED</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if inc.status == 'OPEN' %}
+                        <form action="/incidents/resolve/{{ inc.id }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mark Resolved</button>
+                        </form>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center">No incidents have been reported yet.</td>
+                    <td colspan="6" class="text-center">No incidents have been reported yet.</td>
                 </tr>
                 {% endfor %}
             </tbody>

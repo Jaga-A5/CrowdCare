@@ -112,12 +112,47 @@ def events():
     conn.close()
     return render_template('events.html', events=events_list)
 
+@app.route('/events/create', methods=['POST'])
+def create_event():
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return redirect(url_for('login'))
+    
+    name = request.form['name']
+    location = request.form['location']
+    start_date = request.form['start_date']
+    end_date = request.form['end_date']
+    
+    conn = get_db_connection()
+    conn.execute('INSERT INTO events (name, location, start_date, end_date) VALUES (?, ?, ?, ?)',
+                 (name, location, start_date, end_date))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('events'))
+
 @app.route('/zones')
 def zones():
     conn = get_db_connection()
     zones_list = conn.execute('SELECT * FROM zones').fetchall()
     conn.close()
     return render_template('zones.html', zones=zones_list)
+
+@app.route('/zones/create', methods=['POST'])
+def create_zone():
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return redirect(url_for('login'))
+    
+    name = request.form['name']
+    latitude = float(request.form['latitude'])
+    longitude = float(request.form['longitude'])
+    
+    conn = get_db_connection()
+    conn.execute('INSERT INTO zones (name, latitude, longitude) VALUES (?, ?, ?)',
+                 (name, latitude, longitude))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('zones'))
 
 @app.route('/camera')
 def camera():
@@ -139,7 +174,7 @@ def upload_image():
     threshold = int(request.form.get('threshold', 5))
     zone_id = request.form.get('zone_id', 1)
     
-    # Process image with Real AI and the provided threshold
+    # Process image with Prototype Crowd Estimation (OpenCV-based)
     crowd_count, density, annotated_img_base64 = estimate_crowd(filepath, threshold=threshold)
     
     # Save to db
@@ -250,12 +285,57 @@ def incidents():
     conn.close()
     return render_template('incidents.html', incidents=incs)
 
+@app.route('/incidents/resolve/<int:incident_id>', methods=['POST'])
+def resolve_incident(incident_id):
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    # Update incident status
+    conn.execute("UPDATE incidents SET status='RESOLVED' WHERE id=?", (incident_id,))
+    # Reset assigned responder if any
+    conn.execute("UPDATE responders SET status='AVAILABLE', assigned_incident_id=NULL WHERE assigned_incident_id=?", (incident_id,))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('incidents'))
+
 @app.route('/responders')
 def responders():
     conn = get_db_connection()
     resps = conn.execute('SELECT * FROM responders').fetchall()
     conn.close()
     return render_template('responders.html', responders=resps)
+
+@app.route('/responders/create', methods=['POST'])
+def create_responder():
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return redirect(url_for('login'))
+    
+    name = request.form['name']
+    phone = request.form['phone']
+    latitude = float(request.form['latitude'])
+    longitude = float(request.form['longitude'])
+    
+    conn = get_db_connection()
+    conn.execute('INSERT INTO responders (name, phone, latitude, longitude) VALUES (?, ?, ?, ?)',
+                 (name, phone, latitude, longitude))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('responders'))
+
+@app.route('/responders/reset/<int:responder_id>', methods=['POST'])
+def reset_responder(responder_id):
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    conn.execute("UPDATE responders SET status='AVAILABLE', assigned_incident_id=NULL WHERE id=?", (responder_id,))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('responders'))
 
 @app.route('/cloud')
 def cloud():
