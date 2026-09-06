@@ -44,8 +44,8 @@ def estimate_crowd(image_path, threshold=5):
             for i in np.arange(0, detections.shape[2]):
                 confidence = detections[0, 0, i, 2]
                 
-                # Filter out weak detections
-                if confidence > 0.4:
+                # Filter out weak detections (increased to 0.55 to avoid false positives)
+                if confidence > 0.55:
                     idx = int(detections[0, 0, i, 1])
                     
                     # 15 is the class ID for 'person' in MobileNet SSD
@@ -60,8 +60,7 @@ def estimate_crowd(image_path, threshold=5):
                         cv2.putText(annotated_img, f"Person {crowd_count}", (startX, startY-10), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         else:
-            # Fallback if model files are missing (e.g. running on cloud without LFS)
-            # Use basic Haar Cascade
+            # Fallback to basic Haar Cascade if DNN fails
             cascade_path = os.path.join(BASE_DIR, "haarcascade_fullbody.xml")
             if os.path.exists(cascade_path):
                 body_cascade = cv2.CascadeClassifier(cascade_path)
@@ -73,7 +72,7 @@ def estimate_crowd(image_path, threshold=5):
                     cv2.putText(annotated_img, f"Person {i+1}", (x, y-10), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             else:
-                crowd_count = np.random.randint(1, 4)
+                crowd_count = 0
         
         # Convert to base64
         _, buffer = cv2.imencode('.jpg', annotated_img)
@@ -93,14 +92,4 @@ def estimate_crowd(image_path, threshold=5):
         
     except Exception as e:
         print(f"Error in AI crowd estimation: {e}")
-        # Return fallback values
-        fallback_count = np.random.randint(1, 6)
-        if fallback_count >= threshold:
-            fallback_density = 'CRITICAL'
-        elif fallback_count >= threshold * 0.75:
-            fallback_density = 'HIGH'
-        elif fallback_count >= threshold * 0.4:
-            fallback_density = 'MEDIUM'
-        else:
-            fallback_density = 'LOW'
-        return fallback_count, fallback_density, None
+        return 0, 'LOW', None
