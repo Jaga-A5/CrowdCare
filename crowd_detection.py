@@ -69,18 +69,15 @@ def process_frame(img):
                                cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
     else:
         # Fallback to basic Haar Cascade if DNN fails
-        cascade_path = os.path.join(BASE_DIR, "haarcascade_fullbody.xml")
-        if os.path.exists(cascade_path):
-            body_cascade = cv2.CascadeClassifier(cascade_path)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            bodies = body_cascade.detectMultiScale(gray, 1.1, 3)
-            crowd_count = len(bodies)
-            for i, (x, y, w_box, h_box) in enumerate(bodies):
-                cv2.rectangle(annotated_img, (x, y), (x+w_box, y+h_box), (0, 255, 0), 2)
-                cv2.putText(annotated_img, f"Person {i+1}", (x, y-10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        else:
-            crowd_count = 0
+        # Use facial detection since webcams mostly capture head/shoulders, not full bodies
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        bodies = face_cascade.detectMultiScale(gray, 1.1, 4)
+        crowd_count = len(bodies)
+        for i, (x, y, w_box, h_box) in enumerate(bodies):
+            cv2.rectangle(annotated_img, (x, y), (x+w_box, y+h_box), (0, 255, 0), 2)
+            cv2.putText(annotated_img, f"Person {i+1}", (x, y-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             
     return annotated_img, crowd_count
 
