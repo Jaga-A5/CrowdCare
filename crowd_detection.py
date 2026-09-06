@@ -4,17 +4,19 @@ import numpy as np
 import base64
 from ultralytics import YOLO
 
-# Use the Nano model (yolo11n.pt) because Render's Free Tier (512MB RAM) 
-# will crash/run out of memory if we try to load the Medium model.
-MODEL_PATH = "yolo11n.pt"
+# Determine if we are running locally (Windows) or on Render (Linux)
+import platform
 
-# Load the network once globally to save time
+# Only try to load the heavy YOLO model if we are running locally on your laptop.
+# Render's Free Tier (Linux) only has 512MB RAM and will crash if it tries to load PyTorch.
 model = None
-try:
-    model = YOLO(MODEL_PATH)
-except Exception as e:
-    print(f"Failed to load YOLO model: {e}")
-    model = None
+if platform.system() == "Windows":
+    MODEL_PATH = r"D:\python\AI_Vision_Monitor\models\yolo11m.pt"
+    try:
+        if os.path.exists(MODEL_PATH):
+            model = YOLO(MODEL_PATH)
+    except Exception as e:
+        print(f"Failed to load YOLO model locally: {e}")
 
 def process_frame(img):
     """
