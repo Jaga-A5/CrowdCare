@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📡 CrowdCare Live Monitor</title>
+    <style>
+        body { 
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #121212; 
+            color: #eee; 
+            text-align: center; 
+            margin: 0; 
+            padding: 1rem;
+        }
+        h1 {
+            color: #00e5ff;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .monitor-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #video { 
+            width: 100%;
+            max-width: 100%; 
+            border: 4px solid #333; 
+            border-radius: 12px; 
+            margin-top: 1rem; 
+            background: #000;
+        }
+        .stats-panel {
+            display: flex;
+            justify-content: space-around;
+            background: #1e1e1e;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            border: 1px solid #333;
+        }
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 1px;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        #cnt {
+            color: #00e5ff;
+        }
+        #alert { 
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 68, 68, 0.9);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .show-alert {
+            opacity: 1 !important;
+        }
+        .critical {
+            border-color: #ff4444 !important;
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="alert"></div>
+    
+    <div class="monitor-container">
+        <h1>CrowdCare Live Monitor</h1>
+        
+        <img id="video" src="/video_feed" alt="Live video feed connecting...">
+        
+        <div class="stats-panel">
+            <div class="stat-box">
+                <span class="stat-label">Live Count</span>
+                <span class="stat-value" id="cnt">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Threshold</span>
+                <span class="stat-value" style="color: #888;">{{ threshold }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const cntSpan = document.getElementById('cnt');
+        const alertDiv = document.getElementById('alert');
+        const videoElement = document.getElementById('video');
+        const threshold = {{ threshold }};
+
+        // Fetch count periodically fallback (in case video drops or as secondary)
+        async function refreshCount() {
+            try {
+                const res = await fetch('/api/count');
+                const data = await res.json();
+                cntSpan.textContent = data.crowd_count;
+                
+                // Visual indicator for high crowd
+                if (data.crowd_count >= threshold) {
+                    videoElement.classList.add('critical');
+                    cntSpan.style.color = '#ff4444';
+                } else {
+                    videoElement.classList.remove('critical');
+                    cntSpan.style.color = '#00e5ff';
+                }
+            } catch (e) {
+                console.error("Error fetching count:", e);
+            }
+        }
+        setInterval(refreshCount, 1000);
+        refreshCount();
+
+        // Setup Socket.IO for instant alerts
+        const socket = io();
+        
+        socket.on('connect', () => {
+            console.log('Connected to alert server');
+        });
+        
+        socket.on('alert', data => {
+            // Vibrate phone if supported
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            // Show alert UI
+            alertDiv.textContent = data.message;
+            alertDiv.classList.add('show-alert');
+            
+            // Auto hide after 6 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show-alert');
+            }, 6000);
+        });
+    </script>
+</body>
+</html>
