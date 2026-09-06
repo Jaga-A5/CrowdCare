@@ -4,17 +4,13 @@ import numpy as np
 import base64
 from ultralytics import YOLO
 
-# Get the directory of the current script to find the model files
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Use the advanced YOLO11 model from user's directory
-# Use the advanced YOLO11 Medium model for highest accuracy
-MODEL_PATH = r"D:\python\AI_Vision_Monitor\models\yolo11m.pt"
+# Use the advanced YOLO11 Medium model (Ultralytics will auto-download this if missing)
+MODEL_PATH = "yolo11m.pt"
 
 # Load the network once globally to save time
 model = None
 try:
-    if os.path.exists(MODEL_PATH):
-        model = YOLO(MODEL_PATH)
+    model = YOLO(MODEL_PATH)
 except Exception as e:
     print(f"Failed to load YOLO model: {e}")
     model = None
