@@ -41,8 +41,8 @@ def process_frame(img):
                 cls = int(box.cls[0])
                 if cls == 0:
                     conf = float(box.conf[0])
-                    # Filter out weak detections
-                    if conf > 0.5:
+                    # Filter out weak detections (lowered to 0.25 for better webcam sensitivity)
+                    if conf > 0.25:
                         crowd_count += 1
                         
                         # Get bounding box coordinates
