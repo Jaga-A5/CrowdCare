@@ -10,8 +10,15 @@ MODEL_PATH = os.path.join(BASE_DIR, "MobileNetSSD_deploy.caffemodel")
 
 # Load the network once globally to save time
 net = None
-if os.path.exists(PROTOTXT_PATH) and os.path.exists(MODEL_PATH):
-    net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
+try:
+    if os.path.exists(PROTOTXT_PATH) and os.path.exists(MODEL_PATH):
+        if hasattr(cv2.dnn, 'readNetFromCaffe'):
+            net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
+        else:
+            net = cv2.dnn.readNet(MODEL_PATH, PROTOTXT_PATH)
+except Exception as e:
+    print(f"Failed to load MobileNet SSD: {e}")
+    net = None
 
 def estimate_crowd(image_path, threshold=5):
     """
