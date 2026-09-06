@@ -2,23 +2,21 @@ import os
 import cv2
 import numpy as np
 import base64
+from ultralytics import YOLO
 
 # Get the directory of the current script to find the model files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROTOTXT_PATH = os.path.join(BASE_DIR, "MobileNetSSD_deploy.prototxt")
-MODEL_PATH = os.path.join(BASE_DIR, "MobileNetSSD_deploy.caffemodel")
+# Use the advanced YOLO11 model from user's directory
+MODEL_PATH = r"D:\python\AI_Vision_Monitor\models\yolo11n.pt"
 
 # Load the network once globally to save time
-net = None
+model = None
 try:
-    if os.path.exists(PROTOTXT_PATH) and os.path.exists(MODEL_PATH):
-        if hasattr(cv2.dnn, 'readNetFromCaffe'):
-            net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
-        else:
-            net = cv2.dnn.readNet(MODEL_PATH, PROTOTXT_PATH)
+    if os.path.exists(MODEL_PATH):
+        model = YOLO(MODEL_PATH)
 except Exception as e:
-    print(f"Failed to load MobileNet SSD: {e}")
-    net = None
+    print(f"Failed to load YOLO model: {e}")
+    model = None
 
 def process_frame(img):
     """
@@ -27,46 +25,44 @@ def process_frame(img):
         annotated_img: Image with visualizations drawn.
         crowd_count: Integer count of detected people.
     """
-    global net
+    global model
     annotated_img = img.copy()
     crowd_count = 0
     
     # If model is loaded, use AI detection
-    if net is not None:
-        (h, w) = img.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 0.007843, (300, 300), 127.5)
-        net.setInput(blob)
-        detections = net.forward()
+    if model is not None:
+        # Run YOLO inference
+        results = model(img, stream=True, verbose=False)
         
-        for i in np.arange(0, detections.shape[2]):
-            confidence = detections[0, 0, i, 2]
-            
-            # Filter out weak detections (increased to 0.55 to avoid false positives)
-            if confidence > 0.55:
-                idx = int(detections[0, 0, i, 1])
-                
-                # 15 is the class ID for 'person' in MobileNet SSD
-                if idx == 15:
-                    crowd_count += 1
-                    
-                    # Calculate bounding box
-                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                    (startX, startY, endX, endY) = box.astype("int")
-                    
-                    # Calculate center and radius for a circular "field" visualization
-                    centerX = int((startX + endX) / 2)
-                    centerY = int((startY + endY) / 2)
-                    radius = int(max((endX - startX), (endY - startY)) / 1.5)
-                    
-                    # Draw advanced circular visualization
-                    cv2.circle(annotated_img, (centerX, centerY), radius, (0, 255, 255), 2) # Outer circle
-                    cv2.circle(annotated_img, (centerX, centerY), int(radius/2), (0, 200, 255), 1) # Inner ring
-                    cv2.circle(annotated_img, (centerX, centerY), 4, (0, 0, 255), -1) # Center dot
-                    
-                    # Draw a sleek label
-                    label = f"Person {crowd_count} [{int(confidence * 100)}%]"
-                    cv2.putText(annotated_img, label, (startX, startY - 15), 
-                               cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
+        for r in results:
+            boxes = r.boxes
+            for box in boxes:
+                # class 0 is 'person' in COCO dataset (default for YOLO11)
+                cls = int(box.cls[0])
+                if cls == 0:
+                    conf = float(box.conf[0])
+                    # Filter out weak detections
+                    if conf > 0.5:
+                        crowd_count += 1
+                        
+                        # Get bounding box coordinates
+                        x1, y1, x2, y2 = box.xyxy[0]
+                        startX, startY, endX, endY = int(x1), int(y1), int(x2), int(y2)
+                        
+                        # Calculate center and radius for a circular "field" visualization
+                        centerX = int((startX + endX) / 2)
+                        centerY = int((startY + endY) / 2)
+                        radius = int(max((endX - startX), (endY - startY)) / 1.5)
+                        
+                        # Draw advanced circular visualization
+                        cv2.circle(annotated_img, (centerX, centerY), radius, (0, 255, 255), 2) # Outer circle
+                        cv2.circle(annotated_img, (centerX, centerY), int(radius/2), (0, 200, 255), 1) # Inner ring
+                        cv2.circle(annotated_img, (centerX, centerY), 4, (0, 0, 255), -1) # Center dot
+                        
+                        # Draw a sleek label
+                        label = f"Person {crowd_count} [{int(conf * 100)}%]"
+                        cv2.putText(annotated_img, label, (startX, startY - 15), 
+                                   cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
     else:
         # Fallback to basic Haar Cascade if DNN fails
         # Use facial detection since webcams mostly capture head/shoulders, not full bodies
