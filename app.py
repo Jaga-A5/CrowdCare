@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask_socketio import SocketIO, emit
 from database import init_db, get_db_connection
 from crowd_detection import estimate_crowd
 from analytics import get_analytics, predict_crowd
@@ -9,6 +10,7 @@ import datetime
 
 app = Flask(__name__)
 app.secret_key = 'crowdcare_secret_key'
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 # Ensure database is initialized even when running via Gunicorn
 init_db()
@@ -220,8 +222,11 @@ def upload_image():
                 assigned_name = assigned_responder['name']
                 
             alert_message = f"ALERT: Incident created. Responder {assigned_name} assigned."
+            # Emit real-time push notification via WebSocket
+            socketio.emit('new_incident', {'message': alert_message, 'zone_id': zone_id})
         else:
             alert_message = f"WARNING: {density} crowd density. (Incident already open for this zone)."
+            socketio.emit('new_incident', {'message': alert_message, 'zone_id': zone_id})
         
     conn.commit()
     conn.close()
@@ -277,6 +282,9 @@ def report_incident():
     conn.close()
     
     simulate_cloud_upload(data, 'incident_data')
+    
+    # Emit real-time push notification via WebSocket
+    socketio.emit('new_incident', {'message': f"ALERT: New Manual Incident reported. Responder {assigned_name} assigned.", 'zone_id': data.get('zone_id', 0)})
     
     return jsonify({
         'message': 'Incident reported successfully',
@@ -493,4 +501,4 @@ def send_chat_message():
 
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

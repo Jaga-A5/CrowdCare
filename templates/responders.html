@@ -177,7 +177,21 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+    const socket = io();
+    socket.on('connect', () => {
+        console.log('Connected to Cloud Push Notifications');
+    });
+    
+    socket.on('new_incident', data => {
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 500]);
+        }
+        alert(data.message + "\n\nRefreshing dashboard...");
+        location.reload();
+    });
+
     function loadMessages() {
         fetch('/api/chat/messages')
             .then(res => res.json())
