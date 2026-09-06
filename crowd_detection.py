@@ -7,7 +7,8 @@ from ultralytics import YOLO
 # Get the directory of the current script to find the model files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Use the advanced YOLO11 model from user's directory
-MODEL_PATH = r"D:\python\AI_Vision_Monitor\models\yolo11n.pt"
+# Use the advanced YOLO11 Medium model for highest accuracy
+MODEL_PATH = r"D:\python\AI_Vision_Monitor\models\yolo11m.pt"
 
 # Load the network once globally to save time
 model = None
@@ -49,20 +50,13 @@ def process_frame(img):
                         x1, y1, x2, y2 = box.xyxy[0]
                         startX, startY, endX, endY = int(x1), int(y1), int(x2), int(y2)
                         
-                        # Calculate center and radius for a circular "field" visualization
-                        centerX = int((startX + endX) / 2)
-                        centerY = int((startY + endY) / 2)
-                        radius = int(max((endX - startX), (endY - startY)) / 1.5)
-                        
-                        # Draw advanced circular visualization
-                        cv2.circle(annotated_img, (centerX, centerY), radius, (0, 255, 255), 2) # Outer circle
-                        cv2.circle(annotated_img, (centerX, centerY), int(radius/2), (0, 200, 255), 1) # Inner ring
-                        cv2.circle(annotated_img, (centerX, centerY), 4, (0, 0, 255), -1) # Center dot
+                        # Draw standard thick green bounding box (as requested)
+                        cv2.rectangle(annotated_img, (startX, startY), (endX, endY), (0, 255, 0), 4)
                         
                         # Draw a sleek label
-                        label = f"Person {crowd_count} [{int(conf * 100)}%]"
-                        cv2.putText(annotated_img, label, (startX, startY - 15), 
-                                   cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
+                        label = f"Person [{int(conf * 100)}%]"
+                        cv2.putText(annotated_img, label, (startX, startY - 10), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     else:
         # Fallback to basic Haar Cascade if DNN fails
         # Use facial detection since webcams mostly capture head/shoulders, not full bodies
