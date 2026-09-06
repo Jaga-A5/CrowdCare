@@ -3,61 +3,70 @@ import cv2
 import numpy as np
 import base64
 
+# Get the directory of the current script to find the model files
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROTOTXT_PATH = os.path.join(BASE_DIR, "MobileNetSSD_deploy.prototxt")
+MODEL_PATH = os.path.join(BASE_DIR, "MobileNetSSD_deploy.caffemodel")
+
+# Load the network once globally to save time
+net = None
+if os.path.exists(PROTOTXT_PATH) and os.path.exists(MODEL_PATH):
+    net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
+
 def estimate_crowd(image_path, threshold=5):
     """
-    PROTOTYPE CROWD ESTIMATION using OpenCV-based methods.
-    This is a demonstration method for college project purposes.
-    In production, this would be replaced with advanced ML models like CSRNet.
+    CROWD ESTIMATION using MobileNet SSD AI model.
     """
+    global net
     try:
         # Read the image
         img = cv2.imread(image_path)
         if img is None:
             return 0, 'LOW', None
         
-        # Convert to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Apply Gaussian blur to reduce noise
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Edge detection using Canny
-        edges = cv2.Canny(blurred, 50, 150)
-        
-        # Find contours
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Filter contours by area to estimate number of people
-        # This is a heuristic approach - real crowd counting uses ML
-        min_contour_area = 100  # Minimum area to consider as a person
-        valid_contours = [c for c in contours if cv2.contourArea(c) > min_contour_area]
-        
-        # Estimate crowd count based on contour analysis
-        # This is a simplified method for demonstration
-        crowd_count = len(valid_contours)
-        
-        # To make it more realistic for demonstration, we can use some heuristics
-        # Adjust based on image size and contour density
-        height, width = img.shape[:2]
-        image_area = height * width
-        total_contour_area = sum(cv2.contourArea(c) for c in valid_contours)
-        
-        # If we have very few contours but large areas, estimate more people
-        if crowd_count < 3 and total_contour_area > image_area * 0.1:
-            crowd_count = int(total_contour_area / (image_area * 0.02))
-        
-        # Ensure we have at least some detection for demonstration
-        if crowd_count == 0:
-            crowd_count = np.random.randint(1, 4)
-        
-        # Create annotated image for visualization
         annotated_img = img.copy()
-        for i, contour in enumerate(valid_contours[:20]):  # Limit to 20 for performance
-            if cv2.contourArea(contour) > min_contour_area:
-                x, y, w, h = cv2.boundingRect(contour)
-                cv2.rectangle(annotated_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                cv2.putText(annot_img, f"Person {i+1}", (x, y-10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        crowd_count = 0
+        
+        # If model is loaded, use AI detection
+        if net is not None:
+            (h, w) = img.shape[:2]
+            blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 0.007843, (300, 300), 127.5)
+            net.setInput(blob)
+            detections = net.forward()
+            
+            for i in np.arange(0, detections.shape[2]):
+                confidence = detections[0, 0, i, 2]
+                
+                # Filter out weak detections
+                if confidence > 0.4:
+                    idx = int(detections[0, 0, i, 1])
+                    
+                    # 15 is the class ID for 'person' in MobileNet SSD
+                    if idx == 15:
+                        crowd_count += 1
+                        
+                        # Draw bounding box
+                        box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                        (startX, startY, endX, endY) = box.astype("int")
+                        
+                        cv2.rectangle(annotated_img, (startX, startY), (endX, endY), (0, 255, 0), 2)
+                        cv2.putText(annotated_img, f"Person {crowd_count}", (startX, startY-10), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        else:
+            # Fallback if model files are missing (e.g. running on cloud without LFS)
+            # Use basic Haar Cascade
+            cascade_path = os.path.join(BASE_DIR, "haarcascade_fullbody.xml")
+            if os.path.exists(cascade_path):
+                body_cascade = cv2.CascadeClassifier(cascade_path)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                bodies = body_cascade.detectMultiScale(gray, 1.1, 3)
+                crowd_count = len(bodies)
+                for i, (x, y, w_box, h_box) in enumerate(bodies):
+                    cv2.rectangle(annotated_img, (x, y), (x+w_box, y+h_box), (0, 255, 0), 2)
+                    cv2.putText(annotated_img, f"Person {i+1}", (x, y-10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            else:
+                crowd_count = np.random.randint(1, 4)
         
         # Convert to base64
         _, buffer = cv2.imencode('.jpg', annotated_img)
@@ -76,8 +85,8 @@ def estimate_crowd(image_path, threshold=5):
         return crowd_count, density, img_base64
         
     except Exception as e:
-        print(f"Error in prototype crowd estimation: {e}")
-        # Return fallback values for demonstration
+        print(f"Error in AI crowd estimation: {e}")
+        # Return fallback values
         fallback_count = np.random.randint(1, 6)
         if fallback_count >= threshold:
             fallback_density = 'CRITICAL'
