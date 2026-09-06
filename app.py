@@ -302,10 +302,40 @@ def resolve_incident(incident_id):
 
 @app.route('/responders')
 def responders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+        
     conn = get_db_connection()
-    resps = conn.execute('SELECT * FROM responders').fetchall()
+    
+    # For Admin, show all responders
+    if session['role'] == 'ADMIN':
+        resps = conn.execute('''
+            SELECT r.*, u.username 
+            FROM responders r 
+            LEFT JOIN users u ON r.user_id = u.id
+        ''').fetchall()
+        conn.close()
+        return render_template('responders.html', responders=resps, role='ADMIN')
+        
+    # For Responder, show their specific dashboard
+    elif session['role'] == 'RESPONDER':
+        user_id = session['user_id']
+        resp = conn.execute('SELECT * FROM responders WHERE user_id = ?', (user_id,)).fetchone()
+        if not resp:
+            # Fallback if responder profile not linked properly (e.g. sample accounts)
+            resp = conn.execute("SELECT * FROM responders WHERE name LIKE ?", (f"%{session['username']}%",)).fetchone()
+            if not resp:
+                resp = conn.execute('SELECT * FROM responders LIMIT 1').fetchone() # Final fallback
+                
+        incident = None
+        if resp and resp['assigned_incident_id']:
+            incident = conn.execute('SELECT * FROM incidents WHERE id = ?', (resp['assigned_incident_id'],)).fetchone()
+            
+        conn.close()
+        return render_template('responders.html', responder=resp, incident=incident, role='RESPONDER')
+        
     conn.close()
-    return render_template('responders.html', responders=resps)
+    return redirect(url_for('dashboard'))
 
 @app.route('/responders/create', methods=['POST'])
 def create_responder():
@@ -318,8 +348,24 @@ def create_responder():
     longitude = float(request.form['longitude'])
     
     conn = get_db_connection()
-    conn.execute('INSERT INTO responders (name, phone, latitude, longitude) VALUES (?, ?, ?, ?)',
-                 (name, phone, latitude, longitude))
+    c = conn.cursor()
+    
+    # Auto-generate a login for the responder
+    base_username = name.lower().replace(' ', '')
+    username = base_username
+    # Ensure username is unique
+    counter = 1
+    while c.execute('SELECT 1 FROM users WHERE username = ?', (username,)).fetchone():
+        username = f"{base_username}{counter}"
+        counter += 1
+        
+    password = 'password123'
+    c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+              (username, password, 'RESPONDER'))
+    user_id = c.lastrowid
+    
+    c.execute('INSERT INTO responders (name, phone, latitude, longitude, user_id) VALUES (?, ?, ?, ?, ?)',
+                 (name, phone, latitude, longitude, user_id))
     conn.commit()
     conn.close()
     
@@ -406,6 +452,39 @@ def simulation():
 @app.route('/api/generate_zones', methods=['POST'])
 def api_generate_zones():
     return jsonify({'message': 'Fake zone generation disabled for production.'}), 403
+
+# Chat functionality
+@app.route('/api/chat/messages')
+def get_chat_messages():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = get_db_connection()
+    messages = [dict(row) for row in conn.execute('SELECT * FROM messages ORDER BY timestamp ASC').fetchall()]
+    conn.close()
+    return jsonify(messages)
+
+@app.route('/api/chat/send', methods=['POST'])
+def send_chat_message():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.json
+    message = data.get('message', '').strip()
+    
+    if not message:
+        return jsonify({'error': 'Message cannot be empty'}), 400
+        
+    sender_name = session.get('username')
+    role = session.get('role')
+    
+    conn = get_db_connection()
+    conn.execute('INSERT INTO messages (sender_name, role, message) VALUES (?, ?, ?)',
+                 (sender_name, role, message))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
     init_db()

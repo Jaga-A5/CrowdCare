@@ -1,22 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
+
+{% if role == 'ADMIN' %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Responder Team</h2>
+    <h2>Responder Team Management</h2>
     <div>
         <span class="badge bg-success me-2">Total: {{ responders|length }}</span>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createResponderModal">Add Responder</button>
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
     <div class="card-body p-0">
         <table class="table table-striped table-hover mb-0">
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
                     <th>Name</th>
-                    <th>Phone</th>
-                    <th>Location (Lat, Lon)</th>
+                    <th>Login (Username / Pass)</th>
+                    <th>Location</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -25,8 +27,15 @@
                 {% for resp in responders %}
                 <tr>
                     <td>{{ resp.id }}</td>
-                    <td><strong>{{ resp.name }}</strong></td>
-                    <td>{{ resp.phone }}</td>
+                    <td><strong>{{ resp.name }}</strong><br><small class="text-muted">{{ resp.phone }}</small></td>
+                    <td>
+                        {% if resp.username %}
+                            <code>{{ resp.username }}</code><br>
+                            <small class="text-muted">password123</small>
+                        {% else %}
+                            <small class="text-muted">Legacy user</small>
+                        {% endif %}
+                    </td>
                     <td>{{ "%.4f"|format(resp.latitude) }}, {{ "%.4f"|format(resp.longitude) }}</td>
                     <td>
                         {% if resp.status == 'AVAILABLE' %}
@@ -40,7 +49,7 @@
                     <td>
                         {% if resp.status == 'ASSIGNED' %}
                         <form action="/responders/reset/{{ resp.id }}" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-sm btn-outline-success">Reset to Available</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success">Reset</button>
                         </form>
                         {% endif %}
                     </td>
@@ -52,6 +61,22 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Admin Chat Interface -->
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Command Center Comm Link</h5>
+    </div>
+    <div class="card-body" id="chat-messages" style="height: 300px; overflow-y: auto; background: #f8f9fa;">
+        <!-- Chat messages will be loaded here -->
+    </div>
+    <div class="card-footer">
+        <div class="input-group">
+            <input type="text" id="chat-input" class="form-control" placeholder="Type a message to responders...">
+            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
     </div>
 </div>
 
@@ -90,4 +115,119 @@
         </div>
     </div>
 </div>
+
+{% elif role == 'RESPONDER' %}
+<div class="row">
+    <!-- Left Column: Assignment Status -->
+    <div class="col-md-6 mb-4">
+        <h2 class="mb-3">My Assignment</h2>
+        {% if incident %}
+            <div class="card shadow-lg border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> ACTIVE INCIDENT DEPLOYMENT</h4>
+                </div>
+                <div class="card-body bg-light">
+                    <h5><strong>Type:</strong> {{ incident.incident_type }}</h5>
+                    <p class="fs-5">{{ incident.description }}</p>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Severity:</strong> <span class="badge bg-danger">{{ incident.severity }}</span><br>
+                            <strong>Location:</strong> {{ "%.4f"|format(incident.latitude) }}, {{ "%.4f"|format(incident.longitude) }}
+                        </div>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ incident.latitude }},{{ incident.longitude }}" target="_blank" class="btn btn-success btn-lg">
+                            <i class="bi bi-geo-alt"></i> Navigate
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle-fill"></i> Status: AVAILABLE</h5>
+                </div>
+                <div class="card-body text-center p-5 bg-light">
+                    <h3 class="text-success">You are currently on standby.</h3>
+                    <p class="text-muted">You have no active incidents assigned. Monitor the comm link.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Chat Link -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Comm Link</h5>
+            </div>
+            <div class="card-body" id="chat-messages" style="height: 400px; overflow-y: auto; background: #f8f9fa;">
+                <!-- Chat messages will be loaded here -->
+            </div>
+            <div class="card-footer">
+                <div class="input-group">
+                    <input type="text" id="chat-input" class="form-control" placeholder="Type a message...">
+                    <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadMessages() {
+        fetch('/api/chat/messages')
+            .then(res => res.json())
+            .then(data => {
+                const chatBox = document.getElementById('chat-messages');
+                if(!chatBox) return;
+                chatBox.innerHTML = '';
+                data.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = 'mb-2';
+                    const isSystem = msg.role === 'ADMIN';
+                    const color = isSystem ? 'text-primary' : 'text-success';
+                    div.innerHTML = `<strong class="${color}">${msg.sender_name} (${msg.role}):</strong> <span>${msg.message}</span> <small class="text-muted" style="font-size: 0.7em;">${msg.timestamp}</small>`;
+                    chatBox.appendChild(div);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        if (!message) return;
+        
+        fetch('/api/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        }).then(res => res.json()).then(data => {
+            if(data.status === 'success') {
+                input.value = '';
+                loadMessages();
+            }
+        });
+    }
+
+    // Enter key support
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+
+    // Auto-refresh chat
+    if(document.getElementById('chat-messages')) {
+        loadMessages();
+        setInterval(loadMessages, 3000);
+    }
+</script>
 {% endblock %}

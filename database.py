@@ -72,13 +72,15 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS responders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             name TEXT NOT NULL,
             phone TEXT,
             latitude REAL,
             longitude REAL,
             status TEXT DEFAULT 'AVAILABLE',
             assigned_incident_id INTEGER,
-            FOREIGN KEY(assigned_incident_id) REFERENCES incidents(id)
+            FOREIGN KEY(assigned_incident_id) REFERENCES incidents(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS analytics_results (
@@ -92,6 +94,14 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             action TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            sender_name TEXT,
+            role TEXT,
+            message TEXT
         );
     ''')
     
