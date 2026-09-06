@@ -29,11 +29,12 @@ def process_frame(img):
     global model
     annotated_img = img.copy()
     crowd_count = 0
+    max_conf = 0.0
     
     # If model is loaded, use AI detection
     if model is not None:
         # Run YOLO inference
-        results = model(img, stream=True, verbose=False)
+        results = model(img, stream=False, verbose=False) # Changed to stream=False for simpler processing
         
         for r in results:
             boxes = r.boxes
@@ -42,8 +43,11 @@ def process_frame(img):
                 cls = int(box.cls[0])
                 if cls == 0:
                     conf = float(box.conf[0])
-                    # Filter out weak detections (lowered to 0.25 for better webcam sensitivity)
-                    if conf > 0.25:
+                    if conf > max_conf:
+                        max_conf = conf
+                        
+                    # Filter out weak detections
+                    if conf > 0.15: # Lowered further to 15% for extreme debugging
                         crowd_count += 1
                         
                         # Get bounding box coordinates
@@ -57,17 +61,21 @@ def process_frame(img):
                         label = f"Person [{int(conf * 100)}%]"
                         cv2.putText(annotated_img, label, (startX, startY - 10), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                                   
+        cv2.putText(annotated_img, f"AI: YOLO11m (Max Conf: {int(max_conf*100)}%)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
     else:
         # Fallback to basic Haar Cascade if DNN fails
         # Use facial detection since webcams mostly capture head/shoulders, not full bodies
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         bodies = face_cascade.detectMultiScale(gray, 1.1, 4)
-        crowd_count = len(bodies)
-        for i, (x, y, w_box, h_box) in enumerate(bodies):
-            cv2.rectangle(annotated_img, (x, y), (x+w_box, y+h_box), (0, 255, 0), 2)
-            cv2.putText(annotated_img, f"Person {i+1}", (x, y-10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        
+        for (x, y, w, h) in bodies:
+            crowd_count += 1
+            cv2.rectangle(annotated_img, (x, y), (x+w, y+h), (0, 255, 0), 4)
+            cv2.putText(annotated_img, "Face", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
+        cv2.putText(annotated_img, "AI: Haar Cascade (YOLO Failed)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
             
     return annotated_img, crowd_count
 
