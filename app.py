@@ -376,9 +376,7 @@ def bigdata():
 
 @app.route('/api/generate_bigdata', methods=['POST'])
 def generate_data_api():
-    count = request.json.get('count', 1000)
-    generate_big_data(int(count))
-    return jsonify({'message': f'Generated {count} records successfully.'})
+    return jsonify({'message': 'Fake data generation disabled for production.'}), 403
 
 @app.route('/bigdata-concepts')
 def bigdata_concepts():
@@ -407,8 +405,7 @@ def simulation():
 
 @app.route('/api/generate_zones', methods=['POST'])
 def api_generate_zones():
-    generate_zones(40)
-    return jsonify({'message': '40 Zones generated successfully'})
+    return jsonify({'message': 'Fake zone generation disabled for production.'}), 403
 
 if __name__ == '__main__':
     init_db()
