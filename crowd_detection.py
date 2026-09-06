@@ -4,8 +4,9 @@ import numpy as np
 import base64
 from ultralytics import YOLO
 
-# Use the advanced YOLO11 Medium model (Ultralytics will auto-download this if missing)
-MODEL_PATH = "yolo11m.pt"
+# Use the Nano model (yolo11n.pt) because Render's Free Tier (512MB RAM) 
+# will crash/run out of memory if we try to load the Medium model.
+MODEL_PATH = "yolo11n.pt"
 
 # Load the network once globally to save time
 model = None
@@ -58,7 +59,7 @@ def process_frame(img):
                         cv2.putText(annotated_img, label, (startX, startY - 10), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                                    
-        cv2.putText(annotated_img, f"AI: YOLO11m (Max Conf: {int(max_conf*100)}%)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.putText(annotated_img, f"AI: YOLO11n (Max Conf: {int(max_conf*100)}%)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
     else:
         # Fallback to basic Haar Cascade if DNN fails
         # Use facial detection since webcams mostly capture head/shoulders, not full bodies
