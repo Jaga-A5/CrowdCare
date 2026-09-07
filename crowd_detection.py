@@ -67,22 +67,32 @@ def process_frame(img):
             cv2.putText(annotated_img, f"AI: YOLO11 (Max Conf: {int(max_conf*100)}%)", 
                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         else:
-            # Fallback to basic Haar Cascade if DNN fails
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            if face_cascade.empty():
-                raise Exception("Haar cascade XML not found")
-                
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            bodies = face_cascade.detectMultiScale(gray, 1.1, 4)
+            # Fallback to MobileNetSSD if YOLO is disabled
+            prototxt = os.path.join(os.path.dirname(__file__), 'MobileNetSSD_deploy.prototxt')
+            caffemodel = os.path.join(os.path.dirname(__file__), 'MobileNetSSD_deploy.caffemodel')
             
-            # detectMultiScale returns a tuple if empty, array if found
-            if len(bodies) > 0:
-                for (x, y, w, h) in bodies:
-                    crowd_count += 1
-                    cv2.rectangle(annotated_img, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.putText(annotated_img, "Face", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            try:
+                net = cv2.dnn.readNetFromCaffe(prototxt, caffemodel)
+                (h, w) = img.shape[:2]
+                blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 0.007843, (300, 300), 127.5)
+                net.setInput(blob)
+                detections = net.forward()
                 
-            cv2.putText(annotated_img, "AI: Haar Cascade (Cloud Mode)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                for i in np.arange(0, detections.shape[2]):
+                    confidence = detections[0, 0, i, 2]
+                    if confidence > 0.25:
+                        idx = int(detections[0, 0, i, 1])
+                        if idx == 15: # Class 15 is 'person' in MobileNetSSD
+                            crowd_count += 1
+                            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                            (startX, startY, endX, endY) = box.astype("int")
+                            cv2.rectangle(annotated_img, (startX, startY), (endX, endY), (0, 255, 0), 3)
+                            label = f"Person [{int(confidence * 100)}%]"
+                            cv2.putText(annotated_img, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                            
+                cv2.putText(annotated_img, "AI: MobileNet SSD (Cloud Mode)", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            except Exception as e:
+                raise Exception(f"DNN Fallback failed: {e}")
             
     except Exception as e:
         # If ANYTHING crashes, print the exact python error on the camera screen!
