@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 from database import init_db, get_db_connection
-from crowd_detection import estimate_crowd
+from crowd_detection import estimate_crowd, train_yolo_model, validate_model
 from analytics import get_analytics, predict_crowd
 from bigdata_generator import generate_zones, generate_big_data
 from routing import find_nearest_responder
@@ -498,6 +498,71 @@ def send_chat_message():
     conn.close()
     
     return jsonify({'status': 'success'})
+
+@app.route('/api/train_model', methods=['POST'])
+def train_model():
+    """
+    API endpoint to train/retrain the YOLO model.
+    """
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    data_path = data.get('data_path', 'coco8.yaml')
+    epochs = int(data.get('epochs', 50))
+    batch_size = int(data.get('batch_size', 16))
+    img_size = int(data.get('img_size', 640))
+    
+    try:
+        # Start training in background
+        import threading
+        def train_thread():
+            trained_model = train_yolo_model(data_path, epochs, batch_size, img_size)
+            if trained_model:
+                print("Training completed successfully")
+        
+        thread = threading.Thread(target=train_thread)
+        thread.start()
+        
+        return jsonify({
+            'message': 'Model training started in background',
+            'parameters': {
+                'data_path': data_path,
+                'epochs': epochs,
+                'batch_size': batch_size,
+                'img_size': img_size
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/validate_model', methods=['POST'])
+def validate_model_endpoint():
+    """
+    API endpoint to validate the current YOLO model.
+    """
+    if 'user_id' not in session or session['role'] != 'ADMIN':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        from crowd_detection import validate_model as validate_yolo_model
+        results = validate_yolo_model()
+        if results:
+            return jsonify({
+                'message': 'Model validation completed',
+                'results': {
+                    'map50_95': float(results.box.map),
+                    'map50': float(results.box.map50),
+                    'precision': float(results.box.mp),
+                    'recall': float(results.box.mr)
+                }
+            })
+        else:
+            return jsonify({'error': 'Model validation failed'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     init_db()
